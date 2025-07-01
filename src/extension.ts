@@ -12,6 +12,9 @@ export function activate(context: vscode.ExtensionContext) {
 	// Register command to toggle server
 	const toggleServerCommand = vscode.commands.registerCommand('restate-vscode.toggleServer', toggleServer);
 
+    // Register command to open UI
+    const openUICommand = vscode.commands.registerCommand('restate-vscode.openUI', openRestateUI);
+
 	// Build status bar
 	restateServerStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 	restateServerStatusBarItem.command = 'restate-vscode.toggleServer';
@@ -49,6 +52,17 @@ async function toggleServer() {
 	}
 }
 
+async function openRestateUI() {
+    const url = vscode.Uri.parse('http://localhost:9070/ui');
+	try {
+ 		if (!vscode.env.openExternal(url)) {
+        vscode.window.showErrorMessage(`Failed to open Restate UI`);
+		}
+	} catch (error) {
+		vscode.window.showErrorMessage(`Failed to open Restate UI: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
+
 function getRestateEnvironmentVariables(): Record<string, string> {
 	const config = vscode.workspace.getConfiguration('restate');
 	const customEnvVars = config.get<Record<string, string>>('serverEnv', {
@@ -58,7 +72,7 @@ function getRestateEnvironmentVariables(): Record<string, string> {
 
 	// Log custom environment variables for debugging
 	if (Object.keys(customEnvVars).length > 0) {
-		restateServerOutputChannel.appendLine(`Going to use environment variables: ${Object.keys(customEnvVars).join(', ')}`);
+		restateServerOutputChannel.appendLine(`Going to use environment variables: ${JSON.stringify(customEnvVars)}`);
 	}
 
 	return customEnvVars;
