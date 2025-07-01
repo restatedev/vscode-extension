@@ -66,11 +66,19 @@ async function toggleServer() {
 async function openRestateUI() {
     const url = vscode.Uri.parse('http://localhost:9070/ui');
 	try {
- 		if (!vscode.env.openExternal(url)) {
-        vscode.window.showErrorMessage(`Failed to open Restate UI`);
-		}
+		// Open in VS Code's Simple Browser with split right positioning
+		await vscode.commands.executeCommand('simpleBrowser.api.open', url, {
+			preserveFocus: false,
+			viewColumn: vscode.ViewColumn.Beside // Opens split to the right
+		});
 	} catch (error) {
-		vscode.window.showErrorMessage(`Failed to open Restate UI: ${error instanceof Error ? error.message : String(error)}`);
+		// Fallback to external browser if Simple Browser fails
+		vscode.window.showErrorMessage(`Failed to open Restate UI in Simple Browser, trying external browser: ${error instanceof Error ? error.message : String(error)}`);
+		try {
+			await vscode.env.openExternal(url);
+		} catch (fallbackError) {
+			vscode.window.showErrorMessage(`Failed to open Restate UI: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
+		}
 	}
 }
 
