@@ -11,6 +11,6 @@ Welcome to the Restate VS Code Extension! This tool is your gateway to seamless 
 
 ## 📜 Release Notes
 
-### 0.0.01
+### 0.0.1
 
 - Initial release with server management and UI integration.
