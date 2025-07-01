@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { RestateServerRunner } from './RestateServerRunner';
+import {setTimeout} from 'node:timers/promises';
 
 let restateServerRunner: RestateServerRunner | undefined;
 let restateServerOutputChannel: vscode.OutputChannel;
@@ -21,8 +22,11 @@ export function activate(context: vscode.ExtensionContext) {
 	updateStatusBar();
 	restateServerStatusBarItem.show();
 
+	// Set up terminal monitoring for auto-start functionality
+	setupTerminalMonitoring(context);
+
 	// Disposable elements when the extension is closed
-	context.subscriptions.push(toggleServerCommand, restateServerStatusBarItem);
+	context.subscriptions.push(toggleServerCommand, openUICommand, restateServerStatusBarItem);
 }
 
 async function toggleServer() {
@@ -85,6 +89,104 @@ function updateStatusBar() {
 		restateServerStatusBarItem.text = '$(debug-start) Restate Server';
 	}
 }
+
+const SDK_TS_STARTED_MESSAGE = 'INFO: Listening on 9080...';
+
+function setupTerminalMonitoring(context: vscode.ExtensionContext) {
+	// Monitor terminal shell executions for "Restate SDK started" message
+	const terminalDisposable = vscode.window.onDidStartTerminalShellExecution(async (event) => {
+		try {
+			restateServerOutputChannel.appendLine(`Monitoring terminal command: ${event.execution.commandLine.value}`);
+			
+			// Read the terminal output stream in real-time
+			const stream = event.execution.read();
+			for await (const data of stream) {
+				// Check if the output contains "Restate SDK started"
+				if (data.includes(SDK_TS_STARTED_MESSAGE)) {
+					restateServerOutputChannel.appendLine(`Detected "${SDK_TS_STARTED_MESSAGE}" - attempting to auto-start Restate server...`);
+
+					// Auto-start the Restate server if it's not already running
+					await autoStartRestateServer();
+					await registerRestateServiceDeployment();
+					break; // Stop monitoring this execution once we've detected and acted
+				}
+			}
+		} catch (error) {
+			// Ignore errors from terminal monitoring to avoid disrupting other functionality
+			console.log(`Terminal monitoring error: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	});
+
+	context.subscriptions.push(terminalDisposable);
+}
+
+async function autoStartRestateServer() {
+	// Only auto-start if the server is not already running
+	if (!restateServerRunner?.isRunning()) {
+		try {
+			// Show notification to user
+			vscode.window.showInformationMessage('Restate SDK detected - starting Restate server automatically');
+			
+			// Prepare and start the server
+			const restateBasePath = vscode.workspace.workspaceFolders?.at(0)?.uri.path ?? process.cwd();
+			restateServerRunner = new RestateServerRunner(restateServerOutputChannel, restateBasePath, getRestateEnvironmentVariables());
+			await restateServerRunner.startServer();
+
+			// Update UI
+			updateStatusBar();
+			
+			// Show success message to the user
+			vscode.window.showInformationMessage("Restate server started successfully");
+		} catch (error) {
+			const errorMessage = `Failed to start Restate server: ${error instanceof Error ? error.message : String(error)}`;
+			vscode.window.showErrorMessage(errorMessage);
+			throw error;
+		}
+	}
+}
+
+async function registerRestateServiceDeployment() {
+    const url = 'http://localhost:9070/deployments';
+    const payload = {
+        uri: 'http://localhost:9080',
+        additional_headers: {},
+        use_http_11: false,
+        force: true,
+        dry_run: false
+    };
+
+    const maxRetries = 10;
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to register deployment: ${response.statusText}`);
+            }
+
+            const responseBody = await response.json();
+            console.log(responseBody);
+            vscode.window.showInformationMessage('Restate service deployment registered successfully');
+            return; // Exit the loop on success
+        } catch (error) {
+            attempt++;
+            console.error(`Attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`);
+			await setTimeout(200);
+            if (attempt >= maxRetries) {
+                vscode.window.showErrorMessage(`Error registering Restate service deployment after ${maxRetries} attempts: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        }
+    }
+}			
 
 // This method is called when your extension is deactivated
 export async function deactivate() {
