@@ -5,6 +5,7 @@ import {setTimeout} from 'node:timers/promises';
 let restateServerRunner: RestateServerRunner | undefined;
 let restateServerOutputChannel: vscode.OutputChannel;
 let restateServerStatusBarItem: vscode.StatusBarItem;
+let restateOpenUIStatusBarItem: vscode.StatusBarItem;
 
 export function activate(context: vscode.ExtensionContext) {
 	// Build output channel
@@ -16,9 +17,15 @@ export function activate(context: vscode.ExtensionContext) {
     // Register command to open UI
     const openUICommand = vscode.commands.registerCommand('restate-vscode.openUI', openRestateUI);
 
-	// Build status bar
+	// Build status bar items
 	restateServerStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 	restateServerStatusBarItem.command = 'restate-vscode.toggleServer';
+	
+	restateOpenUIStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 99);
+	restateOpenUIStatusBarItem.command = 'restate-vscode.openUI';
+	restateOpenUIStatusBarItem.text = '$(restate-icon) UI';
+	restateOpenUIStatusBarItem.tooltip = 'Open Restate UI';
+	
 	updateStatusBar();
 	restateServerStatusBarItem.show();
 
@@ -26,7 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
 	setupTerminalMonitoring(context);
 
 	// Disposable elements when the extension is closed
-	context.subscriptions.push(toggleServerCommand, openUICommand, restateServerStatusBarItem);
+	context.subscriptions.push(toggleServerCommand, openUICommand, restateServerStatusBarItem, restateOpenUIStatusBarItem);
 }
 
 async function toggleServer() {
@@ -85,8 +92,10 @@ function getRestateEnvironmentVariables(): Record<string, string> {
 function updateStatusBar() {
 	if (restateServerRunner?.isRunning()) {
 		restateServerStatusBarItem.text = '$(debug-stop) Restate Server';
+		restateOpenUIStatusBarItem.show();
 	} else {
 		restateServerStatusBarItem.text = '$(debug-start) Restate Server';
+		restateOpenUIStatusBarItem.hide();
 	}
 }
 
@@ -203,6 +212,9 @@ export async function deactivate() {
 	// Additional cleanup
 	if (restateServerStatusBarItem) {
 		restateServerStatusBarItem.dispose();
+	}
+	if (restateOpenUIStatusBarItem) {
+		restateOpenUIStatusBarItem.dispose();
 	}
 	if (restateServerOutputChannel) {
 		restateServerOutputChannel.dispose();

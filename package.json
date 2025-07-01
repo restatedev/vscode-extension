@@ -37,6 +37,19 @@
           "description": "Environment variables to inject when starting the Restate server"
         }
       }
+    },
+    "icons": {
+      "restate-icon": {
+        "description": "Restate icon",
+        "default": {
+          "fontPath": "icons/restate-light.svg",
+          "fontCharacter": "R"
+        },
+        "dark": {
+          "fontPath": "icons/restate-dark.svg",
+          "fontCharacter": "R"
+        }
+      }
     }
   },
   "scripts": {
