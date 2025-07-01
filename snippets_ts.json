@@ -1,0 +1,47 @@
+{
+	"Restate service": {
+		"prefix": "restateservice",
+		"body": [
+			"const $1 = restate.service({",
+            "  name: '$1',",
+            "  handlers: {",
+            "    async $2(ctx, input) {",
+            "      // Your service logic here",
+            "      return { message: 'Hello from $1!' };",
+            "    }",
+            "  },",
+            "});"
+		],
+		"description": "Restate service snippet"
+	},
+    "Restate object": {
+		"prefix": "restateobject",
+		"body": [
+			"const $1 = restate.object({",
+            "  name: '$1',",
+            "  handlers: {",
+            "    async $2(ctx, input) {",
+            "      // Your logic here",
+            "      return { message: 'Hello from $1!' };",
+            "    }",
+            "  },",
+            "});"
+		],
+		"description": "Restate Virtual Object snippet"
+	},    
+    "Restate workflow": {
+		"prefix": "restateworkflow",
+		"body": [
+			"const $1 = restate.workflow({",
+            "  name: '$1',",
+            "  handlers: {",
+            "    async run(ctx, input) {",
+            "      // Your logic here",
+            "      return { message: 'Hello from $1!' };",
+            "    }",
+            "  },",
+            "});"
+		],
+		"description": "Restate Workflow snippet"
+	}
+}

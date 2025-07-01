@@ -2,6 +2,7 @@
   "name": "restate-vscode",
   "displayName": "restate-vscode",
   "description": "Restate",
+  "publisher": "restatedev",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.100.2"
@@ -50,7 +51,13 @@
           "fontCharacter": "R"
         }
       }
-    }
+    },
+    		"snippets": [
+			{
+				"language": "typescript",
+				"path": "./snippets_ts.json"
+			}
+		]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
