@@ -6,6 +6,7 @@ export class RestateServerRunner {
 	private outputChannel: vscode.OutputChannel;
 	private restateBasePath: string;
 	private customEnvVars: Record<string, string>;
+	private starting: boolean;
 
 	constructor(
 		outputChannel: vscode.OutputChannel,
@@ -15,9 +16,15 @@ export class RestateServerRunner {
 		this.outputChannel = outputChannel;
 		this.restateBasePath = restateBasePath;
 		this.customEnvVars = customEnvVars;
+		this.starting = false;
 	}
 
 	async startServer(): Promise<void> {
+		if (this.starting) {
+			vscode.window.showWarningMessage('Restate server is already starting');
+			return;
+		}
+		this.starting = true;
 		if (this.serverProcess) {
 			vscode.window.showWarningMessage('Restate server is already running');
 			return;
@@ -59,10 +66,17 @@ export class RestateServerRunner {
 					this.outputChannel.appendLine(`Server process error: ${error.message}`);
 					this.serverProcess = undefined;
 				});
+
+				// Start completed, flip the starting flag
+				this.starting = false;
 		});
 	}
 
 	async stopServer(): Promise<void> {
+		if (this.starting) {
+			vscode.window.showWarningMessage('Restate server is starting now, ignoring');
+			return;
+		}
 		if (this.serverProcess) {
 			const processToKill = this.serverProcess;
 			this.serverProcess = undefined; // Clear reference immediately

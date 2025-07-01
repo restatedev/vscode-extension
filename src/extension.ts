@@ -107,6 +107,7 @@ function updateStatusBar() {
 	}
 }
 
+const SDK_GO_STARTED_MESSAGE = 'INFO Started listening on [::]:9080';
 const SDK_TS_STARTED_MESSAGE = 'INFO: Listening on 9080...';
 
 function setupTerminalMonitoring(context: vscode.ExtensionContext) {
@@ -119,7 +120,7 @@ function setupTerminalMonitoring(context: vscode.ExtensionContext) {
 			const stream = event.execution.read();
 			for await (const data of stream) {
 				// Check if the output contains "Restate SDK started"
-				if (data.includes(SDK_TS_STARTED_MESSAGE)) {
+				if (data.includes(SDK_TS_STARTED_MESSAGE) || data.includes(SDK_GO_STARTED_MESSAGE)) {
 					restateServerOutputChannel.appendLine(`Detected "${SDK_TS_STARTED_MESSAGE}" - attempting to auto-start Restate server...`);
 
 					// Auto-start the Restate server if it's not already running
