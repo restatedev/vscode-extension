@@ -31,6 +31,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Set up terminal monitoring for auto-start functionality
 	setupTerminalMonitoring(context);
+	setupDebugConsoleMonitoring(context);
 
 	// Disposable elements when the extension is closed
 	context.subscriptions.push(toggleServerCommand, openUICommand, restateServerStatusBarItem, restateOpenUIStatusBarItem);
@@ -136,6 +137,36 @@ function setupTerminalMonitoring(context: vscode.ExtensionContext) {
 	});
 
 	context.subscriptions.push(terminalDisposable);
+}
+
+function setupDebugConsoleMonitoring(context: vscode.ExtensionContext) {
+    const debugSessionTracker = vscode.debug.registerDebugAdapterTrackerFactory('*', {
+        createDebugAdapterTracker(session) {
+            return {
+                onDidSendMessage(message) {
+                    if (message.type === 'event' && message.event === 'output' && (message.body?.category === 'console' || message.body?.category === 'stderr' || message.body?.category === 'stdout')) {
+                        const output = message.body?.output || "";
+
+                        // Check for specific messages in the debug console output
+                        if (output.includes(SDK_TS_STARTED_MESSAGE) || output.includes(SDK_GO_STARTED_MESSAGE)) {
+                            restateServerOutputChannel.appendLine(`Detected "${SDK_TS_STARTED_MESSAGE}" in debug console - attempting to auto-start Restate server...`);
+
+                            // Auto-start the Restate server if it's not already running
+                            autoStartRestateServer().catch(error => {
+                                console.error(`Error auto-starting Restate server: ${error instanceof Error ? error.message : String(error)}`);
+                            });
+
+                            registerRestateServiceDeployment().catch(error => {
+                                console.error(`Error registering Restate service deployment: ${error instanceof Error ? error.message : String(error)}`);
+                            });
+                        }
+                    }
+                },
+            };
+        },
+    });
+
+    context.subscriptions.push(debugSessionTracker);
 }
 
 async function autoStartRestateServer() {
