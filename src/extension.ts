@@ -125,6 +125,8 @@ const SDK_STARTED_MESSAGE_1 = 'Restate SDK started listening on 9080';
 // Used by Golang SDK
 const SDK_STARTED_MESSAGE_2 = 'Restate SDK started listening on [::]:9080';
 const SDK_STARTED_MESSAGE_3 = 'Restate SDK started listening on 127.0.0.1:9080';
+// Old TS SDK message, let's keep it around for some time and then remove it.
+const SDK_STARTED_MESSAGE_4 = 'INFO: Listening on 9080...';
 
 function setupTerminalMonitoring(context: vscode.ExtensionContext) {
 	// Monitor terminal shell executions for "Restate SDK started" message
@@ -136,7 +138,7 @@ function setupTerminalMonitoring(context: vscode.ExtensionContext) {
 			const stream = event.execution.read();
 			for await (const data of stream) {
 				// Check if the output contains "Restate SDK started"
-				if (data.includes(SDK_STARTED_MESSAGE_1) || data.includes(SDK_STARTED_MESSAGE_2) || data.includes(SDK_STARTED_MESSAGE_3)) {
+				if (data.includes(SDK_STARTED_MESSAGE_1) || data.includes(SDK_STARTED_MESSAGE_2) || data.includes(SDK_STARTED_MESSAGE_3)|| data.includes(SDK_STARTED_MESSAGE_4)) {
 					restateServerOutputChannel.appendLine(`Detected Restate service - will start Restate server...`);
 
 					// Auto-start the Restate server if it's not already running
