@@ -35,42 +35,42 @@ export class RestateServerRunner {
 			title: "Starting Restate server...",
 			cancellable: true
 		}, async (progress, cancellationToken) => {
-				// Check if the Restate server binary is already available
-				const serverPath = `${this.restateBasePath}/.restate/bin/restate-server`;
-				const baseDirServerPath = `${this.restateBasePath}/.restate`;
-				const fs = require('fs');
+			// Check if the Restate server binary is already available
+			const serverPath = `${this.restateBasePath}/.restate/bin/restate-server`;
+			const baseDirServerPath = `${this.restateBasePath}/.restate`;
+			const fs = require('fs');
 
-				if (!fs.existsSync(serverPath)) {
-					// Install the Restate server locally if not available
-					await this.installRestateServer(cancellationToken);
-				} else {
-					this.outputChannel.appendLine(`Using installed binary at ${serverPath}`);
-				}
+			if (!fs.existsSync(serverPath)) {
+				// Install the Restate server locally if not available
+				await this.installRestateServer(cancellationToken);
+			} else {
+				this.outputChannel.appendLine(`Using installed binary at ${serverPath}`);
+			}
 
-				if (cancellationToken.isCancellationRequested) {
-					return;
-				}
+			if (cancellationToken.isCancellationRequested) {
+				return;
+			}
 
-				// Now run the server
-				this.serverProcess = spawn(serverPath, ["--node-name", "vscode-dev", "--base-dir", baseDirServerPath], {
-					env: { "RESTATE_LOG_DISABLE_ANSI_CODES": "true", ...process.env, ...this.customEnvVars },
-					cwd: this.restateBasePath,
-				});
-				this.serverProcess.stdout?.on('data', (data) => this.outputChannel.append(data.toString()));
-				this.serverProcess.stderr?.on('data', (data) => this.outputChannel.append(data.toString()));
-				this.serverProcess.on('close', (code) => {
-					this.outputChannel.appendLine(`Server process exited with code ${code}`);
-					this.serverProcess = undefined;
-					onProcessClosed();
-				});
-				this.serverProcess.on('error', (error) => {
-					this.outputChannel.appendLine(`Server process error: ${error.message}`);
-					this.serverProcess = undefined;
-					onProcessClosed();
-				});
+			// Now run the server
+			this.serverProcess = spawn(serverPath, ["--node-name", "vscode-dev", "--base-dir", baseDirServerPath], {
+				env: { "RESTATE_LOG_DISABLE_ANSI_CODES": "true", ...process.env, ...this.customEnvVars },
+				cwd: this.restateBasePath,
+			});
+			this.serverProcess.stdout?.on('data', (data) => this.outputChannel.append(data.toString()));
+			this.serverProcess.stderr?.on('data', (data) => this.outputChannel.append(data.toString()));
+			this.serverProcess.on('close', (code) => {
+				this.outputChannel.appendLine(`Server process exited with code ${code}`);
+				this.serverProcess = undefined;
+				onProcessClosed();
+			});
+			this.serverProcess.on('error', (error) => {
+				this.outputChannel.appendLine(`Server process error: ${error.message}`);
+				this.serverProcess = undefined;
+				onProcessClosed();
+			});
 
-				// Start completed, flip the starting flag
-				this.starting = false;
+			// Start completed, flip the starting flag
+			this.starting = false;
 		});
 	}
 

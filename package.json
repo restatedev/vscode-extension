@@ -41,8 +41,8 @@
         "restate.serverEnv": {
           "type": "object",
           "default": {
-            	"RESTATE_ADMIN__experimental_feature_force_journal_retention": "365days",
-		          "RESTATE_WORKER__INVOKER__INACTIVITY_TIMEOUT": "1day"
+            "RESTATE_ADMIN__experimental_feature_force_journal_retention": "365days",
+            "RESTATE_WORKER__INVOKER__INACTIVITY_TIMEOUT": "1day"
           },
           "description": "Environment variables to inject when starting the Restate server"
         }
@@ -57,12 +57,12 @@
         }
       }
     },
-    		"snippets": [
-			{
-				"language": "typescript",
-				"path": "./snippets_ts.json"
-			}
-		]
+    "snippets": [
+      {
+        "language": "typescript",
+        "path": "./snippets_ts.json"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
