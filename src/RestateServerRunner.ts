@@ -1,5 +1,4 @@
 import { spawn } from 'child_process';
-import { on } from 'events';
 import * as vscode from 'vscode';
 
 export class RestateServerRunner {
@@ -54,7 +53,7 @@ export class RestateServerRunner {
 
 				// Now run the server
 				this.serverProcess = spawn(serverPath, ["--node-name", "vscode-dev", "--base-dir", baseDirServerPath], {
-					env: { "RESTATE_LOG_DISABLE_ANSI_CODES": "true", ...this.customEnvVars },
+					env: { "RESTATE_LOG_DISABLE_ANSI_CODES": "true", ...process.env, ...this.customEnvVars },
 					cwd: this.restateBasePath,
 				});
 				this.serverProcess.stdout?.on('data', (data) => this.outputChannel.append(data.toString()));
@@ -122,7 +121,7 @@ export class RestateServerRunner {
 	private async installRestateServer(cancellationToken: vscode.CancellationToken): Promise<void> {
 		this.outputChannel.appendLine(`Installing Restate server in ${this.restateBasePath}/.restate ...`);
 		const installProcess = spawn('npm', ['install', '--global', '--no-save', '--prefix', '.restate', '@restatedev/restate-server@latest'], {
-			env: { ...process.env },
+			env: process.env,
 			cwd: this.restateBasePath,
 			detached: false,
 		});
