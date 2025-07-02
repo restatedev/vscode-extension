@@ -55,7 +55,7 @@ async function toggleServer() {
 		const restateBasePath = vscode.workspace.workspaceFolders?.at(0)?.uri.path ?? process.cwd();
 		restateServerRunner = new RestateServerRunner(restateServerOutputChannel, restateBasePath, getRestateEnvironmentVariables());
 		try {
-			await restateServerRunner.startServer();
+			await restateServerRunner.startServer(() => updateStatusBar());
 			updateStatusBar();
 		} catch (error) {
 			vscode.window.showErrorMessage(`Failed to start Restate server: ${error instanceof Error ? error.message : String(error)}`);
@@ -179,7 +179,7 @@ async function autoStartRestateServer() {
 			// Prepare and start the server
 			const restateBasePath = vscode.workspace.workspaceFolders?.at(0)?.uri.path ?? process.cwd();
 			restateServerRunner = new RestateServerRunner(restateServerOutputChannel, restateBasePath, getRestateEnvironmentVariables());
-			await restateServerRunner.startServer();
+			await restateServerRunner.startServer(() => updateStatusBar());
 
 			// Update UI
 			updateStatusBar();

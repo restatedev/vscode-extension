@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import { on } from 'events';
 import * as vscode from 'vscode';
 
 export class RestateServerRunner {
@@ -19,7 +20,7 @@ export class RestateServerRunner {
 		this.starting = false;
 	}
 
-	async startServer(): Promise<void> {
+	async startServer(onProcessClosed: () => void): Promise<void> {
 		if (this.starting) {
 			vscode.window.showWarningMessage('Restate server is already starting');
 			return;
@@ -61,10 +62,12 @@ export class RestateServerRunner {
 				this.serverProcess.on('close', (code) => {
 					this.outputChannel.appendLine(`Server process exited with code ${code}`);
 					this.serverProcess = undefined;
+					onProcessClosed();
 				});
 				this.serverProcess.on('error', (error) => {
 					this.outputChannel.appendLine(`Server process error: ${error.message}`);
 					this.serverProcess = undefined;
+					onProcessClosed();
 				});
 
 				// Start completed, flip the starting flag
