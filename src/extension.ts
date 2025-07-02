@@ -6,6 +6,7 @@ let restateServerRunner: RestateServerRunner | undefined;
 let restateServerOutputChannel: vscode.OutputChannel;
 let restateServerStatusBarItem: vscode.StatusBarItem;
 let restateOpenUIStatusBarItem: vscode.StatusBarItem;
+let focusOutputChannelStatusBarItem: vscode.StatusBarItem;
 
 export function activate(context: vscode.ExtensionContext) {
 	// Build output channel
@@ -17,14 +18,23 @@ export function activate(context: vscode.ExtensionContext) {
     // Register command to open UI
     const openUICommand = vscode.commands.registerCommand('restate-vscode.openUI', openRestateUI);
 
+	// Register the command to focus on the output channel
+	const focusOutputChannelCommand = vscode.commands.registerCommand('restate-vscode.focusLogs', () => {
+		restateServerOutputChannel.show(false);
+	});
+
 	// Build status bar items
 	restateServerStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 	restateServerStatusBarItem.command = 'restate-vscode.toggleServer';
-	
+		restateServerStatusBarItem.tooltip = 'Toggle Restate Server';
 	restateOpenUIStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 99);
 	restateOpenUIStatusBarItem.command = 'restate-vscode.openUI';
 	restateOpenUIStatusBarItem.text = '$(restate-icon) UI';
 	restateOpenUIStatusBarItem.tooltip = 'Open Restate UI';
+	focusOutputChannelStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 98);
+focusOutputChannelStatusBarItem.command = 'restate-vscode.focusLogs';
+focusOutputChannelStatusBarItem.text = '$(restate-icon) Logs';
+focusOutputChannelStatusBarItem.tooltip = 'Open Restate server logs';
 	
 	updateStatusBar();
 	restateServerStatusBarItem.show();
@@ -34,7 +44,7 @@ export function activate(context: vscode.ExtensionContext) {
 	setupDebugConsoleMonitoring(context);
 
 	// Disposable elements when the extension is closed
-	context.subscriptions.push(toggleServerCommand, openUICommand, restateServerStatusBarItem, restateOpenUIStatusBarItem);
+	context.subscriptions.push(toggleServerCommand, openUICommand, focusOutputChannelCommand, restateServerStatusBarItem, restateOpenUIStatusBarItem, focusOutputChannelStatusBarItem);
 }
 
 async function toggleServer() {
@@ -51,7 +61,7 @@ async function toggleServer() {
 	} else {
 
 		restateServerOutputChannel.clear();
-		restateServerOutputChannel.show();
+		restateServerOutputChannel.show(false);
 		const restateBasePath = vscode.workspace.workspaceFolders?.at(0)?.uri.path ?? process.cwd();
 		restateServerRunner = new RestateServerRunner(restateServerOutputChannel, restateBasePath, getRestateEnvironmentVariables());
 		try {
@@ -102,9 +112,11 @@ function updateStatusBar() {
 	if (restateServerRunner?.isRunning()) {
 		restateServerStatusBarItem.text = '$(debug-stop) Restate Server';
 		restateOpenUIStatusBarItem.show();
+		focusOutputChannelStatusBarItem.show();
 	} else {
 		restateServerStatusBarItem.text = '$(debug-start) Restate Server';
 		restateOpenUIStatusBarItem.hide();
+		focusOutputChannelStatusBarItem.hide();
 	}
 }
 
@@ -247,16 +259,5 @@ export async function deactivate() {
 			console.error(`Error stopping Restate server: ${error instanceof Error ? error.message : String(error)}`);
 		}
 		restateServerRunner = undefined;
-	}
-
-	// Additional cleanup
-	if (restateServerStatusBarItem) {
-		restateServerStatusBarItem.dispose();
-	}
-	if (restateOpenUIStatusBarItem) {
-		restateOpenUIStatusBarItem.dispose();
-	}
-	if (restateServerOutputChannel) {
-		restateServerOutputChannel.dispose();
 	}
 }

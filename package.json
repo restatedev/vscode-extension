@@ -25,9 +25,13 @@
         "command": "restate-vscode.toggleServer",
         "title": "Restate Server: Start/Stop"
       },
-         {
+      {
         "command": "restate-vscode.openUI",
         "title": "Restate Server: Open UI"
+      },
+      {
+        "command": "restate-vscode.focusLogs",
+        "title": "Open Restate server logs"
       }
     ],
     "configuration": {
