@@ -165,7 +165,7 @@ function setupDebugConsoleMonitoring(context: vscode.ExtensionContext) {
 						const output = message.body?.output || "";
 
 						// Check for specific messages in the debug console output
-						if (output.includes(SDK_STARTED_MESSAGE_1) || output.includes(SDK_GO_STARTED_MESSAGE)) {
+						if (output.includes(SDK_STARTED_MESSAGE_1) || output.includes(SDK_STARTED_MESSAGE_2) || output.includes(SDK_STARTED_MESSAGE_3) || output.includes(SDK_STARTED_MESSAGE_4)) {
 							restateServerOutputChannel.appendLine(`Detected "${SDK_STARTED_MESSAGE_1}" in debug console - attempting to auto-start Restate server...`);
 
 							// Auto-start the Restate server if it's not already running
