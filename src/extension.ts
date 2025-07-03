@@ -245,8 +245,8 @@ async function registerRestateServiceDeployment() {
 			return; // Exit the loop on success
 		} catch (error) {
 			attempt++;
-			console.error(`Attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`);
-			await setTimeout(200);
+			console.info(`Attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`);
+			await setTimeout(400);
 			if (attempt >= maxRetries) {
 				vscode.window.showErrorMessage(`Error registering Restate service deployment after ${maxRetries} attempts: ${error instanceof Error ? error.message : String(error)}`);
 			}
