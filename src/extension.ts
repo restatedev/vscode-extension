@@ -211,7 +211,19 @@ async function autoStartRestateServer() {
 	}
 }
 
+let isRegisteringDeployment = false;
+
 async function registerRestateServiceDeployment() {
+	if (isRegisteringDeployment) {
+		return; // Prevent concurrent registrations
+	}
+	isRegisteringDeployment = true;
+	await _registerRestateServiceDeployment().finally(() => {
+		isRegisteringDeployment = false;
+	});
+}
+
+async function _registerRestateServiceDeployment() {
 	const url = 'http://localhost:9070/deployments';
 	const payload = {
 		uri: 'http://localhost:9080',
@@ -245,7 +257,7 @@ async function registerRestateServiceDeployment() {
 			return; // Exit the loop on success
 		} catch (error) {
 			attempt++;
-			console.info(`Attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`);
+			console.log(`Attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`);
 			await setTimeout(400);
 			if (attempt >= maxRetries) {
 				vscode.window.showErrorMessage(`Error registering Restate service deployment after ${maxRetries} attempts: ${error instanceof Error ? error.message : String(error)}`);
