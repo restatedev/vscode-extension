@@ -4,7 +4,7 @@ Welcome to the Restate VS Code Extension! This tool is your gateway to seamless 
 
 ## 🚀 Features
 
-- **Auto install Restate Server**: Installs automatically Restate server in your project directory.
+- **Auto install Restate Server**: Installs automatically Restate server in your project directory. For more info about the server license, checkout https://www.npmjs.com/package/@restatedev/restate-server
 - **Start/Stop Restate Server**: Easily toggle a local Restate server instance directly from VS Code status bar.
 - **Auto register service**: Detects when Restate SDK starts and automatically starts the restate-server with it, and registers the deployment. Only works with Typescript and Golang SDK at the moment.
 - ***Snippets**: Some handy restate snippets.
