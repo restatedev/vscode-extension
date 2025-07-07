@@ -52,7 +52,7 @@ export class RestateServerRunner {
 			}
 
 			// Now run the server
-			this.serverProcess = spawn(serverPath, ["--node-name", "vscode-dev", "--base-dir", baseDirServerPath], {
+			this.serverProcess = spawn(serverPath, ["--node-name", "dev-cluster", "--base-dir", baseDirServerPath], {
 				env: { "RESTATE_LOG_DISABLE_ANSI_CODES": "true", ...process.env, ...this.customEnvVars },
 				cwd: this.restateBasePath,
 			});
