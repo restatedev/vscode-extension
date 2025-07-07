@@ -9,6 +9,8 @@ Welcome to the Restate VS Code Extension! This tool is your gateway to seamless 
 - **Auto register service**: Detects when Restate SDK starts and automatically starts the restate-server with it, and registers the deployment. Only works with Typescript and Golang SDK at the moment.
 - ***Snippets**: Some handy restate snippets.
 
+**NOTE** This plugin is currently **experimental** and some of its features might not work correctly and/or might change.
+
 ## 📜 Release Notes
 
 ### 0.0.1
