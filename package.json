@@ -3,7 +3,7 @@
   "displayName": "Restate",
   "description": "Restate VSCode extension providing a seamless integration between your IDE and Restate, the workflow as a code platform",
   "publisher": "slinkydeveloper",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "icon": "icons/plugin-logo.png",
   "engines": {
     "vscode": "^1.100.2"
