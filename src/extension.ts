@@ -223,10 +223,10 @@ async function registerRestateServiceDeployment() {
 	});
 }
 
-async function _registerRestateServiceDeployment() {
+async function _registerRestateServiceDeployment(servicePort: number = 9070) {
 	const url = 'http://localhost:9070/deployments';
 	const payload = {
-		uri: 'http://localhost:9080',
+		uri: `http://localhost:${servicePort}`,
 		additional_headers: {},
 		use_http_11: false,
 		force: true,
@@ -253,14 +253,14 @@ async function _registerRestateServiceDeployment() {
 
 			const responseBody = await response.json();
 			console.log(responseBody);
-			vscode.window.showInformationMessage('Restate service deployment registered successfully');
+			vscode.window.showInformationMessage(`Restate service deployment at ${servicePort} registered successfully`);
 			return; // Exit the loop on success
 		} catch (error) {
 			attempt++;
 			console.log(`Attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`);
 			await setTimeout(400);
 			if (attempt >= maxRetries) {
-				vscode.window.showErrorMessage(`Error registering Restate service deployment after ${maxRetries} attempts: ${error instanceof Error ? error.message : String(error)}`);
+				vscode.window.showErrorMessage(`Error registering Restate service deployment at ${servicePort} after ${maxRetries} attempts: ${error instanceof Error ? error.message : String(error)}`);
 			}
 		}
 	}
