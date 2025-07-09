@@ -34,6 +34,10 @@
       {
         "command": "restate-vscode.focusLogs",
         "title": "Open Restate server logs"
+      },
+      {
+        "command": "restate-vscode.registerService",
+        "title": "Restate Server: Register Service"
       }
     ],
     "configuration": {

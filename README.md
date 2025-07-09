@@ -8,11 +8,11 @@ Welcome to the Restate VS Code Extension! This tool is your gateway to seamless 
 
 ## 🚀 Get me started
 
-* Download the extension here: 
-* Use `npx -y @restatedev/create-app@latest && cd restate-node-template` to bootstrap the Restate template
-* `npm install` to install the dependencies
+* Use `npx -y @restatedev/create-app@latest && cd restate-node-template && npm install` to bootstrap the Restate template
 * `code .` to start VSCode
+* Install the extension from https://marketplace.visualstudio.com/items?itemName=slinkydeveloper.restate-vscode-unofficial
 * Now press `F5` (`Run > Start Debugging`). The example will start, and together with it the restate-server will be downloaded and started.
+* Explore the available features by typing `Restate` in the commands bar.
 
 ## ✨ Features
 

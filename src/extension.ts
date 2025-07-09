@@ -23,6 +23,9 @@ export function activate(context: vscode.ExtensionContext) {
 		restateServerOutputChannel.show(false);
 	});
 
+	// Register command to manually run service registration
+	const registerServiceCommand = vscode.commands.registerCommand('restate-vscode.registerService', registerServiceAction);
+
 	// Build status bar items
 	restateServerStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 	restateServerStatusBarItem.command = 'restate-vscode.toggleServer';
@@ -44,7 +47,26 @@ export function activate(context: vscode.ExtensionContext) {
 	setupDebugConsoleMonitoring(context);
 
 	// Disposable elements when the extension is closed
-	context.subscriptions.push(toggleServerCommand, openUICommand, focusOutputChannelCommand, restateServerStatusBarItem, restateOpenUIStatusBarItem, focusOutputChannelStatusBarItem);
+	context.subscriptions.push(toggleServerCommand, openUICommand, focusOutputChannelCommand, restateServerStatusBarItem, restateOpenUIStatusBarItem, focusOutputChannelStatusBarItem, registerServiceCommand);
+}
+
+async function registerServiceAction() {
+	const portInput = await vscode.window.showInputBox({
+		prompt: 'Enter the service port for registration',
+		value: '9080',
+		validateInput: (input) => {
+			const port = Number(input);
+			return isNaN(port) || port <= 0 || port > 65535 ? 'Please enter a valid port number' : null;
+		}
+	});
+
+	if (!portInput) {
+		vscode.window.showWarningMessage('Service registration canceled');
+		return;
+	}
+
+	const servicePort = Number(portInput);
+	await _registerRestateServiceDeployment(servicePort);
 }
 
 async function toggleServer() {
@@ -223,7 +245,7 @@ async function registerRestateServiceDeployment() {
 	});
 }
 
-async function _registerRestateServiceDeployment(servicePort: number = 9070) {
+async function _registerRestateServiceDeployment(servicePort: number = 9080) {
 	const url = 'http://localhost:9070/deployments';
 	const payload = {
 		uri: `http://localhost:${servicePort}`,
@@ -253,7 +275,7 @@ async function _registerRestateServiceDeployment(servicePort: number = 9070) {
 
 			const responseBody = await response.json();
 			console.log(responseBody);
-			vscode.window.showInformationMessage(`Restate service deployment at ${servicePort} registered successfully`);
+			vscode.window.showInformationMessage(`Restate service at ${servicePort} registered. Open the UI and start sending some requests!`);
 			return; // Exit the loop on success
 		} catch (error) {
 			attempt++;
