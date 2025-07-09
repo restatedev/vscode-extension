@@ -4,45 +4,54 @@ import * as vscode from 'vscode';
 export class RestateServerRunner {
 	private serverProcess: ReturnType<typeof spawn> | undefined;
 	private outputChannel: vscode.OutputChannel;
-	private restateBasePath: string;
-	private customEnvVars: Record<string, string>;
 	private starting: boolean;
 
 	constructor(
 		outputChannel: vscode.OutputChannel,
-		restateBasePath: string,
-		customEnvVars: Record<string, string>
+
 	) {
 		this.outputChannel = outputChannel;
-		this.restateBasePath = restateBasePath;
-		this.customEnvVars = customEnvVars;
 		this.starting = false;
 	}
 
-	async startServer(onProcessClosed: () => void): Promise<void> {
+	async startServer(
+		restateBasePath: string,
+		customEnvVars: Record<string, string>,
+		updateUI: (running: boolean) => void
+	): Promise<void> {
 		if (this.starting) {
 			vscode.window.showWarningMessage('Restate server is already starting');
 			return;
 		}
-		this.starting = true;
 		if (this.serverProcess) {
 			vscode.window.showWarningMessage('Restate server is already running');
 			return;
 		}
+		this.starting = true;
+		await this._startServer(restateBasePath, customEnvVars, updateUI).finally(() => {
+			this.starting = false;
+		});
+	}
 
+	async _startServer(
+		restateBasePath: string,
+		customEnvVars: Record<string, string>,
+		updateUI: (running: boolean) => void
+	): Promise<void> {
 		await vscode.window.withProgress({
 			location: vscode.ProgressLocation.Notification,
-			title: "Starting Restate server...",
+			title: "Starting Restate server",
 			cancellable: true
 		}, async (progress, cancellationToken) => {
 			// Check if the Restate server binary is already available
-			const serverPath = `${this.restateBasePath}/.restate/bin/restate-server`;
-			const baseDirServerPath = `${this.restateBasePath}/.restate`;
+			const serverPath = `${restateBasePath}/.restate/bin/restate-server`;
+			const baseDirServerPath = `${restateBasePath}/.restate`;
 			const fs = require('fs');
 
 			if (!fs.existsSync(serverPath)) {
+				progress.report({ message: "downloading Restate" });
 				// Install the Restate server locally if not available
-				await this.installRestateServer(cancellationToken);
+				await this.installRestateServer(restateBasePath, cancellationToken);
 			} else {
 				this.outputChannel.appendLine(`Using installed binary at ${serverPath}`);
 			}
@@ -52,25 +61,30 @@ export class RestateServerRunner {
 			}
 
 			// Now run the server
+			progress.report({ message: "spawn restate-server" });
 			this.serverProcess = spawn(serverPath, ["--node-name", "dev-cluster", "--base-dir", baseDirServerPath], {
-				env: { "RESTATE_LOG_DISABLE_ANSI_CODES": "true", ...process.env, ...this.customEnvVars },
-				cwd: this.restateBasePath,
+				env: { "RESTATE_LOG_DISABLE_ANSI_CODES": "true", ...process.env, ...customEnvVars },
+				cwd: restateBasePath,
+			});
+			this.serverProcess.once('spawn', () => {
+				updateUI(true);
+			});
+			this.serverProcess.on('error', (error) => {
+				this.outputChannel.appendLine(`Server process error: ${error.message}`);
+				this.serverProcess = undefined;
+				updateUI(false);
 			});
 			this.serverProcess.stdout?.on('data', (data) => this.outputChannel.append(data.toString()));
 			this.serverProcess.stderr?.on('data', (data) => this.outputChannel.append(data.toString()));
 			this.serverProcess.on('close', (code) => {
 				this.outputChannel.appendLine(`Server process exited with code ${code}`);
 				this.serverProcess = undefined;
-				onProcessClosed();
-			});
-			this.serverProcess.on('error', (error) => {
-				this.outputChannel.appendLine(`Server process error: ${error.message}`);
-				this.serverProcess = undefined;
-				onProcessClosed();
+				updateUI(false);
 			});
 
 			// Start completed, flip the starting flag
 			this.starting = false;
+			progress.report({ message: "started restate-server" });
 		});
 	}
 
@@ -87,7 +101,6 @@ export class RestateServerRunner {
 			processToKill.kill('SIGTERM');
 
 			return new Promise<void>((resolve, reject) => {
-
 				// Force kill after 10 seconds if still running
 				const forceKillTimeout = setTimeout(() => {
 					try {
@@ -118,11 +131,14 @@ export class RestateServerRunner {
 		}
 	}
 
-	private async installRestateServer(cancellationToken: vscode.CancellationToken): Promise<void> {
-		this.outputChannel.appendLine(`Installing Restate server in ${this.restateBasePath}/.restate ...`);
+	private async installRestateServer(
+		restateBasePath: string,
+		cancellationToken: vscode.CancellationToken
+	): Promise<void> {
+		this.outputChannel.appendLine(`Installing Restate server in ${restateBasePath}/.restate ...`);
 		const installProcess = spawn('npm', ['install', '--global', '--no-save', '--prefix', '.restate', '@restatedev/restate-server@latest'], {
 			env: process.env,
-			cwd: this.restateBasePath,
+			cwd: restateBasePath,
 			detached: false,
 		});
 		cancellationToken.onCancellationRequested(() => {

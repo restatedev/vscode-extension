@@ -9,8 +9,9 @@ let restateOpenUIStatusBarItem: vscode.StatusBarItem;
 let focusOutputChannelStatusBarItem: vscode.StatusBarItem;
 
 export function activate(context: vscode.ExtensionContext) {
-	// Build output channel
+	// Build output channel and server runner
 	restateServerOutputChannel = vscode.window.createOutputChannel('Restate Server');
+	restateServerRunner = new RestateServerRunner(restateServerOutputChannel);
 
 	// Register command to toggle server
 	const toggleServerCommand = vscode.commands.registerCommand('restate-vscode.toggleServer', toggleServer);
@@ -39,7 +40,7 @@ export function activate(context: vscode.ExtensionContext) {
 	focusOutputChannelStatusBarItem.text = '$(restate-icon) Logs';
 	focusOutputChannelStatusBarItem.tooltip = 'Open Restate server logs';
 
-	updateStatusBar();
+	updateStatusBar(false);
 	restateServerStatusBarItem.show();
 
 	// Set up terminal monitoring for auto-start functionality
@@ -66,7 +67,7 @@ async function registerServiceAction() {
 	}
 
 	const servicePort = Number(portInput);
-	await _registerRestateServiceDeployment(servicePort);
+	await registerRestateServiceDeployment(servicePort);
 }
 
 async function toggleServer() {
@@ -78,17 +79,13 @@ async function toggleServer() {
 			restateServerOutputChannel.appendLine(`Failed to stop server: ${error instanceof Error ? error.message : String(error)}`);
 		}
 		restateServerRunner = undefined;
-		updateStatusBar();
+		updateStatusBar(false);
 		restateServerOutputChannel.hide();
 	} else {
-
 		restateServerOutputChannel.clear();
 		restateServerOutputChannel.show(false);
-		const restateBasePath = vscode.workspace.workspaceFolders?.at(0)?.uri.path ?? process.cwd();
-		restateServerRunner = new RestateServerRunner(restateServerOutputChannel, restateBasePath, getRestateEnvironmentVariables());
 		try {
-			await restateServerRunner.startServer(() => updateStatusBar());
-			updateStatusBar();
+			await restateServerRunner!!.startServer(getRestateBasePath(), getRestateEnvironmentVariables(), (running) => updateStatusBar(running));
 		} catch (error) {
 			vscode.window.showErrorMessage(`Failed to start Restate server: ${error instanceof Error ? error.message : String(error)}`);
 			restateServerOutputChannel.appendLine(`Failed to start server: ${error instanceof Error ? error.message : String(error)}`);
@@ -115,6 +112,10 @@ async function openRestateUI() {
 	}
 }
 
+function getRestateBasePath(): string {
+	return vscode.workspace.workspaceFolders?.at(0)?.uri.path ?? process.cwd();
+}
+
 function getRestateEnvironmentVariables(): Record<string, string> {
 	const config = vscode.workspace.getConfiguration('restate');
 	const customEnvVars = config.get<Record<string, string>>('serverEnv', {
@@ -130,8 +131,8 @@ function getRestateEnvironmentVariables(): Record<string, string> {
 	return customEnvVars;
 }
 
-function updateStatusBar() {
-	if (restateServerRunner?.isRunning()) {
+function updateStatusBar(running: boolean) {
+	if (running) {
 		restateServerStatusBarItem.text = '$(debug-stop) Restate Server';
 		restateOpenUIStatusBarItem.show();
 		focusOutputChannelStatusBarItem.show();
@@ -142,36 +143,15 @@ function updateStatusBar() {
 	}
 }
 
-// Used by TS SDK
-const SDK_STARTED_MESSAGE_1 = 'Restate SDK started listening on 9080';
-// Used by Golang SDK
-const SDK_STARTED_MESSAGE_2 = 'Restate SDK started listening on [::]:9080';
-const SDK_STARTED_MESSAGE_3 = 'Restate SDK started listening on 127.0.0.1:9080';
-// Old TS SDK message, let's keep it around for some time and then remove it.
-const SDK_STARTED_MESSAGE_4 = 'INFO: Listening on 9080...';
-
 function setupTerminalMonitoring(context: vscode.ExtensionContext) {
 	// Monitor terminal shell executions for "Restate SDK started" message
 	const terminalDisposable = vscode.window.onDidStartTerminalShellExecution(async (event) => {
-		try {
-			restateServerOutputChannel.appendLine(`Monitoring terminal command: ${event.execution.commandLine.value}`);
-
-			// Read the terminal output stream in real-time
-			const stream = event.execution.read();
-			for await (const data of stream) {
-				// Check if the output contains "Restate SDK started"
-				if (data.includes(SDK_STARTED_MESSAGE_1) || data.includes(SDK_STARTED_MESSAGE_2) || data.includes(SDK_STARTED_MESSAGE_3) || data.includes(SDK_STARTED_MESSAGE_4)) {
-					restateServerOutputChannel.appendLine(`Detected Restate service in terminal - will start Restate server...`);
-
-					// Auto-start the Restate server if it's not already running
-					await autoStartRestateServer();
-					await registerRestateServiceDeployment();
-					break; // Stop monitoring this execution once we've detected and acted
-				}
+		// Read the terminal output stream in real-time
+		const stream = event.execution.read();
+		for await (const data of stream) {
+			if (await onNewOutputLine(data)) {
+				break; // Stop monitoring this execution once we've detected and acted
 			}
-		} catch (error) {
-			// Ignore errors from terminal monitoring to avoid disrupting other functionality
-			console.log(`Terminal monitoring error: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	});
 
@@ -186,19 +166,7 @@ function setupDebugConsoleMonitoring(context: vscode.ExtensionContext) {
 					if (message.type === 'event' && message.event === 'output' && (message.body?.category === 'console' || message.body?.category === 'stderr' || message.body?.category === 'stdout')) {
 						const output = message.body?.output || "";
 
-						// Check for specific messages in the debug console output
-						if (output.includes(SDK_STARTED_MESSAGE_1) || output.includes(SDK_STARTED_MESSAGE_2) || output.includes(SDK_STARTED_MESSAGE_3) || output.includes(SDK_STARTED_MESSAGE_4)) {
-							restateServerOutputChannel.appendLine(`Detected Restate service in debug session - will start Restate server...`);
-
-							// Auto-start the Restate server if it's not already running
-							autoStartRestateServer()
-								.catch(error => {
-									console.error(`Error auto-starting Restate server: ${error instanceof Error ? error.message : String(error)}`);
-								})
-								.then(() => registerRestateServiceDeployment().catch(error => {
-									console.error(`Error registering Restate service deployment: ${error instanceof Error ? error.message : String(error)}`);
-								}));
-						}
+						onNewOutputLine(output).finally(() => { });
 					}
 				},
 			};
@@ -206,6 +174,34 @@ function setupDebugConsoleMonitoring(context: vscode.ExtensionContext) {
 	});
 
 	context.subscriptions.push(debugSessionTracker);
+}
+
+// Used by TS SDK
+const SDK_STARTED_MESSAGE_1 = 'Restate SDK started listening on 9080';
+// Used by Golang SDK
+const SDK_STARTED_MESSAGE_2 = 'Restate SDK started listening on [::]:9080';
+const SDK_STARTED_MESSAGE_3 = 'Restate SDK started listening on 127.0.0.1:9080';
+// Old TS SDK message, let's keep it around for some time and then remove it.
+const SDK_STARTED_MESSAGE_4 = 'INFO: Listening on 9080...';
+
+let isAutoStarting = false;
+
+async function onNewOutputLine(output: string): Promise<boolean> {
+	if (output.includes(SDK_STARTED_MESSAGE_1) || output.includes(SDK_STARTED_MESSAGE_2) || output.includes(SDK_STARTED_MESSAGE_3) || output.includes(SDK_STARTED_MESSAGE_4)) {
+		// Auto-start the Restate server if it's not already running
+		if (isAutoStarting) {
+			return false; // Already auto-starting, no need to do it again
+		}
+		isAutoStarting = true;
+		try {
+			await autoStartRestateServer();
+			await registerRestateServiceDeployment();
+		} finally {
+			isAutoStarting = false;
+		}
+		return true; // Stop monitoring this execution once we've detected and acted
+	}
+	return false; // Continue monitoring
 }
 
 async function autoStartRestateServer() {
@@ -216,12 +212,7 @@ async function autoStartRestateServer() {
 			vscode.window.showInformationMessage('Restate SDK detected - starting Restate server automatically');
 
 			// Prepare and start the server
-			const restateBasePath = vscode.workspace.workspaceFolders?.at(0)?.uri.path ?? process.cwd();
-			restateServerRunner = new RestateServerRunner(restateServerOutputChannel, restateBasePath, getRestateEnvironmentVariables());
-			await restateServerRunner.startServer(() => updateStatusBar());
-
-			// Update UI
-			updateStatusBar();
+			await restateServerRunner!!.startServer(getRestateBasePath(), getRestateEnvironmentVariables(), (running) => updateStatusBar(running));
 
 			// Show success message to the user
 			vscode.window.showInformationMessage("Restate server started successfully");
@@ -233,19 +224,7 @@ async function autoStartRestateServer() {
 	}
 }
 
-let isRegisteringDeployment = false;
-
-async function registerRestateServiceDeployment() {
-	if (isRegisteringDeployment) {
-		return; // Prevent concurrent registrations
-	}
-	isRegisteringDeployment = true;
-	await _registerRestateServiceDeployment().finally(() => {
-		isRegisteringDeployment = false;
-	});
-}
-
-async function _registerRestateServiceDeployment(servicePort: number = 9080) {
+async function registerRestateServiceDeployment(servicePort: number = 9080) {
 	const url = 'http://localhost:9070/deployments';
 	const payload = {
 		uri: `http://localhost:${servicePort}`,
@@ -258,33 +237,45 @@ async function _registerRestateServiceDeployment(servicePort: number = 9080) {
 	const maxRetries = 10;
 	let attempt = 0;
 
-	while (attempt < maxRetries) {
-		try {
-			const response = await fetch(url, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json'
-				},
-				body: JSON.stringify(payload)
-			});
+	try {
+		await vscode.window.withProgress({
+			location: vscode.ProgressLocation.Notification,
+			title: `Registering Restate service deployment at ${servicePort}`,
+			cancellable: true
+		}, async (progress, cancellationToken) => {
+			while (attempt < maxRetries && !cancellationToken.isCancellationRequested) {
+				try {
+					const response = await fetch(url, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'Accept': 'application/json'
+						},
+						body: JSON.stringify(payload)
+					});
 
-			if (!response.ok) {
-				throw new Error(`Failed to register deployment: ${response.statusText}`);
-			}
+					if (!response.ok) {
+						throw new Error(`Failed to register deployment: ${response.statusText}`);
+					}
 
-			const responseBody = await response.json();
-			console.log(responseBody);
-			vscode.window.showInformationMessage(`Restate service at ${servicePort} registered. Open the UI and start sending some requests!`);
-			return; // Exit the loop on success
-		} catch (error) {
-			attempt++;
-			console.log(`Attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`);
-			await setTimeout(400);
-			if (attempt >= maxRetries) {
-				vscode.window.showErrorMessage(`Error registering Restate service deployment at ${servicePort} after ${maxRetries} attempts: ${error instanceof Error ? error.message : String(error)}`);
+					const responseBody = await response.json();
+					console.log(responseBody);
+					progress.report({ message: "registered" });
+					return; // Exit the loop on success
+				} catch (error) {
+					attempt++;
+					progress.report({ message: `attempt ${attempt} failed, retrying` });
+					console.log(`Attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`);
+					await setTimeout(400);
+					if (attempt >= maxRetries) {
+						throw error;
+					}
+				}
 			}
-		}
+		});
+		vscode.window.showInformationMessage(`Restate service at ${servicePort} registered. Open the UI and start sending some requests!`);
+	} catch (error) {
+		vscode.window.showErrorMessage(`Error registering Restate service deployment at ${servicePort} after ${maxRetries} attempts: ${error instanceof Error ? error.message : String(error)}`);
 	}
 }
 
