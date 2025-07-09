@@ -2,9 +2,7 @@
 
 Welcome to the Restate VS Code Extension! This tool is your gateway to seamless integration with Restate, the platform for building innately resilient applications. Whether you're managing local servers or exploring Restate's UI, this extension has got you covered.
 
-**NOTE**: This project is not an official Restate project. 
-
-**NOTE** This plugin is currently **experimental** and some of its features might not work correctly and/or might change.
+**NOTE** This plugin is currently **experimental** and some of its features might not work correctly and/or might change. This is currently developed as a personal project of mine. 
 
 ## 🚀 Get me started
 
@@ -23,6 +21,6 @@ Welcome to the Restate VS Code Extension! This tool is your gateway to seamless 
 
 ## 📜 Release Notes
 
-### 0.0.1
+### 0.0.5
 
 - Initial release with server management and UI integration.
