@@ -138,8 +138,8 @@ function setupTerminalMonitoring(context: vscode.ExtensionContext) {
 			const stream = event.execution.read();
 			for await (const data of stream) {
 				// Check if the output contains "Restate SDK started"
-				if (data.includes(SDK_STARTED_MESSAGE_1) || data.includes(SDK_STARTED_MESSAGE_2) || data.includes(SDK_STARTED_MESSAGE_3)|| data.includes(SDK_STARTED_MESSAGE_4)) {
-					restateServerOutputChannel.appendLine(`Detected Restate service - will start Restate server...`);
+				if (data.includes(SDK_STARTED_MESSAGE_1) || data.includes(SDK_STARTED_MESSAGE_2) || data.includes(SDK_STARTED_MESSAGE_3) || data.includes(SDK_STARTED_MESSAGE_4)) {
+					restateServerOutputChannel.appendLine(`Detected Restate service in terminal - will start Restate server...`);
 
 					// Auto-start the Restate server if it's not already running
 					await autoStartRestateServer();
@@ -166,16 +166,16 @@ function setupDebugConsoleMonitoring(context: vscode.ExtensionContext) {
 
 						// Check for specific messages in the debug console output
 						if (output.includes(SDK_STARTED_MESSAGE_1) || output.includes(SDK_STARTED_MESSAGE_2) || output.includes(SDK_STARTED_MESSAGE_3) || output.includes(SDK_STARTED_MESSAGE_4)) {
-							restateServerOutputChannel.appendLine(`Detected "${SDK_STARTED_MESSAGE_1}" in debug console - attempting to auto-start Restate server...`);
+							restateServerOutputChannel.appendLine(`Detected Restate service in debug session - will start Restate server...`);
 
 							// Auto-start the Restate server if it's not already running
-							autoStartRestateServer().catch(error => {
-								console.error(`Error auto-starting Restate server: ${error instanceof Error ? error.message : String(error)}`);
-							});
-
-							registerRestateServiceDeployment().catch(error => {
-								console.error(`Error registering Restate service deployment: ${error instanceof Error ? error.message : String(error)}`);
-							});
+							autoStartRestateServer()
+								.catch(error => {
+									console.error(`Error auto-starting Restate server: ${error instanceof Error ? error.message : String(error)}`);
+								})
+								.then(() => registerRestateServiceDeployment().catch(error => {
+									console.error(`Error registering Restate service deployment: ${error instanceof Error ? error.message : String(error)}`);
+								}));
 						}
 					}
 				},
