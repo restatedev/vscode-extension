@@ -51,6 +51,16 @@
             "RESTATE_WORKER__INVOKER__INACTIVITY_TIMEOUT": "1day"
           },
           "description": "Environment variables to inject when starting the Restate server"
+        },
+        "restate.autoRegistrationMode": {
+          "enum": ["Disabled", "Automatic", "Ask confirmation"],
+          "default": "Automatic",
+          "description": "Controls the behavior of auto-registration of Restate services"
+        },
+        "restate.autoStartRestateServer": {
+          "enum": ["Disabled", "Automatic", "Ask confirmation"],
+          "default": "Automatic",
+          "description": "Controls the behavior of starting the restate-server when a Restate service is detected"
         }
       }
     },

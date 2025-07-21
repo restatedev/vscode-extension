@@ -67,7 +67,7 @@ async function registerServiceAction() {
 	}
 
 	const servicePort = Number(portInput);
-	await registerRestateServiceDeployment(servicePort);
+	await registerRestateServiceDeployment("Automatic", servicePort);
 }
 
 async function toggleServer() {
@@ -78,7 +78,6 @@ async function toggleServer() {
 			vscode.window.showErrorMessage(`Failed to stop Restate server: ${error instanceof Error ? error.message : String(error)}`);
 			restateServerOutputChannel.appendLine(`Failed to stop server: ${error instanceof Error ? error.message : String(error)}`);
 		}
-		restateServerRunner = undefined;
 		updateStatusBar(false);
 		restateServerOutputChannel.hide();
 	} else {
@@ -207,10 +206,30 @@ async function onNewOutputLine(output: string): Promise<boolean> {
 async function autoStartRestateServer() {
 	// Only auto-start if the server is not already running
 	if (!restateServerRunner?.isRunning()) {
-		try {
+		const config = vscode.workspace.getConfiguration('restate');
+		const autoStartRestateServer = config.get<string>('autoStartRestateServer', 'Automatic');
+
+		if (autoStartRestateServer === 'Disabled') {
+			return;
+		}
+
+		if (autoStartRestateServer === 'Ask confirmation') {
+			const userResponse = await vscode.window.showInformationMessage(
+				'Restate service detected, do you want to start restate-server?',
+				'Yes',
+				'No'
+			);
+
+			if (userResponse !== 'Yes') {
+				return;
+			}
+		}
+		if (autoStartRestateServer === 'Automatic') {
 			// Show notification to user
 			vscode.window.showInformationMessage('Restate SDK detected - starting Restate server automatically');
+		}
 
+		try {
 			// Prepare and start the server
 			await restateServerRunner!!.startServer(getRestateBasePath(), getRestateEnvironmentVariables(), (running) => updateStatusBar(running));
 
@@ -224,7 +243,23 @@ async function autoStartRestateServer() {
 	}
 }
 
-async function registerRestateServiceDeployment(servicePort: number = 9080) {
+async function registerRestateServiceDeployment(autoRegistrationMode: string = vscode.workspace.getConfiguration('restate').get<string>('autoRegistrationMode', 'Automatic'), servicePort: number = 9080) {
+	if (autoRegistrationMode === 'Disabled') {
+		return;
+	}
+
+	if (autoRegistrationMode === 'Ask confirmation') {
+		const userResponse = await vscode.window.showInformationMessage(
+			`Do you want to register the Restate service deployment at port ${servicePort}?`,
+			'Yes',
+			'No'
+		);
+
+		if (userResponse !== 'Yes') {
+			return;
+		}
+	}
+
 	const url = 'http://localhost:9070/deployments';
 	const payload = {
 		uri: `http://localhost:${servicePort}`,

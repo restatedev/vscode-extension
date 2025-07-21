@@ -21,6 +21,17 @@ Welcome to the Restate VS Code Extension! This tool is your gateway to seamless 
 
 ## 📜 Release Notes
 
+### 0.0.6
+
+- **New Configuration: `restate.autoRegistrationMode`**: Allows users to control the behavior of service registration. Modes include:
+  - `Disabled`: Disables automatic service registration.
+  - `Ask confirmation`: Prompts the user for confirmation before registering a service.
+  - `Automatic`: Automatically registers the service without user intervention (default).
+- **New Configuration: `restate.autoStartRestateServer`**: Allows users to control the behavior of auto starting the restate-server when a Restate service is detected. Modes include:
+  - `Disabled`: Disables automatic starting of restate server.
+  - `Ask confirmation`: Prompts the user for confirmation before starting the restate server.
+  - `Automatic`: Automatically starts the restate server (default).
+
 ### 0.0.5
 
 - Initial release with server management and UI integration.
